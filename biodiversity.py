@@ -13,10 +13,11 @@
 # - `from matplotlib import pyplot as plt`
 # - `import pandas as pd`
 
-# In[38]:
+# In[35]:
 
 
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 import pandas as pd
 
 
@@ -48,16 +49,23 @@ species.head(10)
 
 # How many different species are in the `species` DataFrame?
 
-# In[40]:
+# In[38]:
 
 
-number_of_species = species.scientific_name.nunique()
+number_of_species = species.scientific_name.nunique()  # 5541
 number_of_species
 
 
 # What are the different values of `category` in `species`?
 
-# In[41]:
+# In[39]:
+
+
+number_per_category = species.groupby('category').scientific_name.count().reset_index()
+number_per_category
+
+
+# In[40]:
 
 
 species_category_values = species.category.unique()
@@ -66,7 +74,7 @@ species_category_values
 
 # What are the different values of `conservation_status`?
 
-# In[42]:
+# In[41]:
 
 
 conservation_status_values = species.conservation_status.unique()
@@ -84,7 +92,7 @@ conservation_status_values
 # 
 # We'd like to count up how many species meet each of these criteria.  Use `groupby` to count how many `scientific_name` meet each of these criteria.
 
-# In[45]:
+# In[42]:
 
 
 conservation_status_stats = species.groupby('conservation_status').scientific_name.nunique().reset_index()
@@ -98,7 +106,7 @@ conservation_status_stats
 # species.fillna('No Intervention', inplace=True)
 # ```
 
-# In[46]:
+# In[43]:
 
 
 species.fillna('No Intervention', inplace=True)
@@ -106,7 +114,7 @@ species.fillna('No Intervention', inplace=True)
 
 # Great! Now run the same `groupby` as before to see how many species require `No Protection`.
 
-# In[49]:
+# In[44]:
 
 
 conservation_status_stats = species.groupby('conservation_status').scientific_name.nunique().reset_index()
@@ -122,10 +130,10 @@ conservation_status_stats
 #     .sort_values(by='scientific_name')
 # ```
 
-# In[50]:
+# In[45]:
 
 
-protection_counts = species.groupby('conservation_status')    .scientific_name.count().reset_index()    .sort_values(by='scientific_name')
+protection_counts = species.groupby('conservation_status')    .scientific_name.nunique().reset_index()     .sort_values(by='scientific_name').reset_index(drop=True)
 protection_counts
 
 
@@ -139,7 +147,7 @@ protection_counts
 # 6. Title the graph `Conservation Status by Species`
 # 7. Plot the grap using `plt.show()`
 
-# In[51]:
+# In[46]:
 
 
 plt.close('all')
@@ -158,21 +166,43 @@ ax.set_ylabel('Number of Species')
 ax.set_title('Conservation Status by Species')
 
 
+# In[47]:
+
+
+protection_counts_2 = protection_counts[0:4]
+protection_counts_2
+
+plt.close('all')
+plt.figure(figsize=(10,4))
+ax = plt.subplot()
+plt.bar(range(len(protection_counts_2['scientific_name'])), protection_counts_2['scientific_name'])
+
+xticks = range(len(protection_counts_2))
+ax.set_xticks(xticks)
+
+xticklabels = protection_counts_2.conservation_status.tolist()
+ax.set_xticklabels(xticklabels)
+
+ax.set_ylabel('Number of Species')
+
+ax.set_title('Conservation Status by Species')
+
+
 # # Step 4
 # Are certain types of species more likely to be endangered?
 
 # Let's create a new column in `species` called `is_protected`, which is `True` if `conservation_status` is not equal to `No Intervention`, and `False` otherwise.
 
-# In[52]:
+# In[48]:
 
 
 species['is_protected'] = species.conservation_status.apply(lambda x: False                                                            if x == 'No Intervention'                                                            else True)
-species.head(10)
+species.head()
 
 
 # Let's group by *both* `category` and `is_protected`.  Save your results to `category_counts`.
 
-# In[57]:
+# In[49]:
 
 
 category_counts = species.groupby(['category', 'is_protected'])['scientific_name'].nunique().reset_index()
@@ -180,7 +210,7 @@ category_counts = species.groupby(['category', 'is_protected'])['scientific_name
 
 # Examine `category_count` using `head()`.
 
-# In[58]:
+# In[50]:
 
 
 category_counts.head(10)
@@ -193,7 +223,7 @@ category_counts.head(10)
 # 
 # Save your pivoted data to `category_pivot`. Remember to `reset_index()` at the end.
 
-# In[59]:
+# In[51]:
 
 
 category_pivot = category_counts.pivot(
@@ -204,7 +234,7 @@ category_pivot = category_counts.pivot(
 
 # Examine `category_pivot`.
 
-# In[60]:
+# In[52]:
 
 
 category_pivot
@@ -215,7 +245,7 @@ category_pivot
 # - Rename `False` to `not_protected`
 # - Rename `True` to `protected`
 
-# In[61]:
+# In[53]:
 
 
 category_pivot.columns = ['category', 'not_protected', 'protected']
@@ -224,7 +254,7 @@ category_pivot
 
 # Let's create a new column of `category_pivot` called `percent_protected`, which is equal to `protected` (the number of species that are protected) divided by `protected` plus `not_protected` (the total number of species).
 
-# In[64]:
+# In[54]:
 
 
 category_pivot['percent_protected'] = 100.0*category_pivot.protected/(category_pivot.protected                                                                      + category_pivot.not_protected)
@@ -232,10 +262,40 @@ category_pivot['percent_protected'] = 100.0*category_pivot.protected/(category_p
 
 # Examine `category_pivot`.
 
-# In[65]:
+# In[55]:
 
 
 category_pivot
+
+
+# In[56]:
+
+
+percents = category_pivot[['category', 'percent_protected']].sort_values(by='percent_protected').reset_index(drop=True)
+percent_list = percents.percent_protected.tolist()
+labels = percents.category.tolist()
+percents
+
+
+# In[57]:
+
+
+
+plt.close('all')
+plt.figure(figsize=(12,4))
+ax = plt.subplot()
+xticks = [x*2 for x in range(len(percent_list))]
+
+plt.bar(xticks, percent_list, width=1)
+
+
+ax.set_xticks(xticks)
+
+ax.set_xticklabels(labels)
+
+ax.set_ylabel('Percent Protected')
+
+ax.set_title('Percentage of Protected Species per Category')
 
 
 # It looks like species in category `Mammal` are more likely to be endangered than species in `Bird`.  We're going to do a significance test to see if this statement is true.  Before you do the significance test, consider the following questions:
@@ -251,7 +311,7 @@ category_pivot
 # 
 # Create a table called `contingency` and fill it in with the correct numbers
 
-# In[69]:
+# In[58]:
 
 
 contingency = [[30, 146], [75, 413]]
@@ -262,7 +322,7 @@ contingency = [[30, 146], [75, 413]]
 # from scipy.stats import chi2_contingency
 # ```
 
-# In[67]:
+# In[59]:
 
 
 from scipy.stats import chi2_contingency
@@ -270,7 +330,7 @@ from scipy.stats import chi2_contingency
 
 # Now run `chi2_contingency` with `contingency`.
 
-# In[70]:
+# In[60]:
 
 
 chi2, pval, dof, expected = chi2_contingency(contingency)
@@ -281,7 +341,7 @@ pval
 # 
 # Let's test another.  Is the difference between `Reptile` and `Mammal` significant?
 
-# In[71]:
+# In[61]:
 
 
 contingency2 = [[30, 146], [5, 73]]
@@ -295,7 +355,7 @@ pval
 
 # Conservationists have been recording sightings of different species at several national parks for the past 7 days.  They've saved sent you their observations in a file called `observations.csv`.  Load `observations.csv` into a variable called `observations`, then use `head` to view the data.
 
-# In[72]:
+# In[62]:
 
 
 observations = pd.read_csv('observations.csv')
@@ -304,7 +364,7 @@ observations.head()
 
 # Some scientists are studying the number of sheep sightings at different national parks.  There are several different scientific names for different types of sheep.  We'd like to know which rows of `species` are referring to sheep.  Notice that the following code will tell us whether or not a word occurs in a string:
 
-# In[26]:
+# In[63]:
 
 
 # Does "Sheep" occur in this string?
@@ -312,7 +372,7 @@ str1 = 'This string contains Sheep'
 'Sheep' in str1
 
 
-# In[27]:
+# In[64]:
 
 
 # Does "Sheep" occur in this string?
@@ -322,7 +382,7 @@ str2 = 'This string contains Cows'
 
 # Use `apply` and a `lambda` function to create a new column in `species` called `is_sheep` which is `True` if the `common_names` contains `'Sheep'`, and `False` otherwise.
 
-# In[73]:
+# In[65]:
 
 
 species['is_sheep'] = species.common_names.apply(lambda x: True if 'Sheep' in x else False)
@@ -331,7 +391,7 @@ species.head()
 
 # Select the rows of `species` where `is_sheep` is `True` and examine the results.
 
-# In[74]:
+# In[66]:
 
 
 species[species.is_sheep == True]
@@ -339,7 +399,7 @@ species[species.is_sheep == True]
 
 # Many of the results are actually plants.  Select the rows of `species` where `is_sheep` is `True` and `category` is `Mammal`.  Save the results to the variable `sheep_species`.
 
-# In[75]:
+# In[67]:
 
 
 sheep_species = species[(species.is_sheep == True) & (species.category == 'Mammal')]
@@ -348,7 +408,7 @@ sheep_species
 
 # Now merge `sheep_species` with `observations` to get a DataFrame with observations of sheep.  Save this DataFrame as `sheep_observations`.
 
-# In[76]:
+# In[68]:
 
 
 sheep_observations = sheep_species.merge(observations)
@@ -359,7 +419,7 @@ sheep_observations
 # 
 # This is the total number of sheep observed in each park over the past 7 days.
 
-# In[77]:
+# In[69]:
 
 
 obs_by_park = sheep_observations.groupby('park_name')['observations'].sum().reset_index()
@@ -377,7 +437,7 @@ obs_by_park
 # 6. Title the graph `Observations of Sheep per Week`
 # 7. Plot the grap using `plt.show()`
 
-# In[33]:
+# In[70]:
 
 
 plt.figure(figsize=(16,4))
@@ -396,20 +456,20 @@ plt.show()
 # 
 # Remember that "Minimum Detectable Effect" is a percent of the baseline.
 
-# In[78]:
+# In[71]:
 
 
 baseline_conversion_rate = 15
 minimal_detectable_effect = 100.0*(15-10)/15 #33%
 signficance_level = 90
-sample_size = 520
+sample_size = 510
 
 minimal_detectable_effect
 
 
 # How many weeks would you need to observe sheep at Bryce National Park in order to observe enough sheep?  How many weeks would you need to observe at Yellowstone National Park to observe enough sheep?
 
-# In[35]:
+# In[72]:
 
 
 bryce_weeks = 510/250
